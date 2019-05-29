@@ -22,7 +22,7 @@ import dtnperf.client.modes.TimeMode;
 import it.unibo.dtn.JAL.BundleEID;
 import it.unibo.dtn.JAL.JALEngine;
 
-public class Main {
+public class MainClient {
 
 	private static BundleEID destination;
 	private static BundleEID replyTo = BundleEID.NoneEndpoint;
