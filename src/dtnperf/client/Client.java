@@ -17,7 +17,7 @@ import it.unibo.dtn.JAL.exceptions.JALUnregisterException;
 
 public class Client implements Runnable {
 	
-	private static final int DEMUXNUMBER = 10;
+	private static final int DEMUXNUMBER = (int) (System.currentTimeMillis() % 100000 + 10000);
 	private static final String DEMUXSTRING = "dtnperf/client_" + System.currentTimeMillis();
 	
 	private final BundleEID dest;
