@@ -13,6 +13,15 @@ Time(ClientMode.TIME_HEADER), Data(ClientMode.DATA_HEADER), File(ClientMode.FILE
 		this.val = val;
 	}
 	
+	static ClientMode getFromValue(int val) {
+		for (ClientMode mode : ClientMode.values()) {
+			if (mode.getValue() == val) {
+				return mode;
+			}
+		}
+		throw new IllegalStateException("Error, client mode not found with value=" + val);
+	}
+	
 	int getValue() {
 		return this.val;
 	}

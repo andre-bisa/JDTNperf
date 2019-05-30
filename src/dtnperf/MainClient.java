@@ -1,6 +1,5 @@
 package dtnperf;
 
-
 import java.time.temporal.ChronoUnit;
 
 import org.apache.commons.cli.CommandLine;
@@ -63,6 +62,8 @@ public class MainClient {
 		options.addOption(windowModeOption);
 		Option rateModeOption = Option.builder("R").hasArg().required(false).desc("Rate mode").longOpt("rate").build();
 		options.addOption(rateModeOption);
+		Option payloadOption = Option.builder("P").hasArg().required(false).desc("Payload size").longOpt("payload").build();
+		options.addOption(payloadOption);
 		
 		CommandLineParser commandLineParser = new DefaultParser();
 		CommandLine commandLine = commandLineParser.parse(options, args);
@@ -106,6 +107,36 @@ public class MainClient {
 			}
 			int number = Integer.parseInt(numberString);
 			mode = new DataMode(number, unit);
+		}
+		
+		if (commandLine.hasOption("P")) {
+			String payloadString = commandLine.getOptionValue("P");
+			String numberString = "";
+			DataUnit unit = null;
+			for (char c : payloadString.toCharArray()) {
+				if (c >= '0' && c <= '9')
+					numberString = numberString + c;
+				else {
+					switch (c) {
+					case 'k':
+					case 'K':
+						unit = DataUnit.KILOBYTES;
+						break;
+					case 'B':
+						unit = DataUnit.BYTES;
+						break;
+					case 'M':
+						unit = DataUnit.MEGABYTES;
+						break;
+
+					default:
+						throw new IllegalArgumentException("Error on parsing data");
+					}
+				}
+			}
+			int number = Integer.parseInt(numberString);
+			payloadSize = number;
+			payloadUnit = unit;
 		}
 		
 		if (commandLine.hasOption("T")) {

@@ -1,5 +1,6 @@
 package dtnperf.header;
 
+import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
@@ -26,6 +27,8 @@ public class ClientHeader {
 	private int crc = 0; // TODO calculate
 	private int ackExpiration = 60;
 	private BundleEID replyTo;
+	
+	private ClientHeader() {}
 	
 	public ClientHeader(BundleEID replyTo, ClientMode mode, boolean ackClient) {
 		this.replyTo = replyTo;
@@ -95,6 +98,37 @@ public class ClientHeader {
 
 	public void setAckExpiration(int ackExpiration) {
 		this.ackExpiration = ackExpiration;
+	}
+
+	public static ClientHeader from(byte[] data) throws BufferUnderflowException {
+		ClientHeader result = new ClientHeader();
+		ByteBuffer buffer = ByteBuffer.wrap(data);
+		buffer.order(BYTEORDER);
+		result.mode = ClientMode.getFromValue(buffer.getInt());
+		short options = buffer.getShort();
+		
+		insertOptionInClientHeader(result, options);
+		
+		result.ackExpiration = buffer.getInt();
+		result.crc = buffer.getInt();
+		short replytoSize = buffer.getShort();
+		byte[] replyto = new byte[replytoSize];
+		for (int i = 0; i < replytoSize; i++)
+			replyto[i] = buffer.get();
+		result.replyTo = BundleEID.of(new String(replyto, StandardCharsets.UTF_8));
+		return result;
+	}
+	
+	private static void insertOptionInClientHeader(ClientHeader result, short options) {
+		result.ackClient = (options & BO_ACK_CLIENT_YES) == BO_ACK_CLIENT_YES;
+		result.ackToMonitor = AckToMonitor.getAckToMonitorFromValue(options);
+		result.setExpiration = (options & BO_SET_EXPIRATION) == BO_SET_EXPIRATION;
+		if ((options & BO_SET_PRIORITY) == BO_SET_PRIORITY) {
+			result.ackPriority = Priority.getPriorityFromValue(options);
+		} else {
+			result.ackPriority = null;
+		}
+		result.crcEnabled = (options & BO_CRC_ENABLED) == BO_CRC_ENABLED;
 	}
 
 	public void insertHeaderInByteBuffer(ByteBuffer buffer) {

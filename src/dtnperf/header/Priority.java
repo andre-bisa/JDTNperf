@@ -16,5 +16,14 @@ public enum Priority {
 	short getValue() {
 		return this.val;
 	}
+
+	static Priority getPriorityFromValue(short options) {
+		for (Priority priority : Priority.values()) {
+			if ( (options & priority.getValue()) == priority.getValue() ) {
+				return priority;
+			}
+		}
+		throw new IllegalStateException("Error, the priority was not found.");
+	}
 	
 }

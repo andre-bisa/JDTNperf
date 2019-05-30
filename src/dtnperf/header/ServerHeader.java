@@ -7,6 +7,7 @@ import java.nio.charset.StandardCharsets;
 
 import it.unibo.dtn.JAL.Bundle;
 import it.unibo.dtn.JAL.BundleEID;
+import it.unibo.dtn.JAL.BundleTimestamp;
 
 public class ServerHeader {
 	private static final int DSA_HEADER = 0x8;
@@ -17,6 +18,31 @@ public class ServerHeader {
 	private BundleEID source;
 	private int timestampSec;
 	private int timestampSeqno;
+	
+	private ServerHeader() {}
+	
+	public ServerHeader(BundleEID source, BundleTimestamp bundleTimestamp) {
+		this.source = source;
+		this.timestampSec = bundleTimestamp.getSeconds();
+		this.timestampSeqno = bundleTimestamp.getSequenceNumber();
+	}
+
+	public byte[] getHeaderBytes() {
+		byte[] sourceEndpointData = this.source.getEndpointID().getBytes();
+		short sourceSize = (short) sourceEndpointData.length;
+		
+		byte[] result = new byte[(Integer.SIZE * 3 + Short.SIZE + Byte.SIZE * sourceSize) / 8];
+		ByteBuffer buffer = ByteBuffer.wrap(result);
+		
+		buffer.order(BYTEORDER);
+		buffer.putInt(this.header);
+		buffer.putShort(sourceSize);
+		buffer.put(sourceEndpointData);
+		buffer.putInt(this.timestampSec);
+		buffer.putInt(this.timestampSeqno);
+		
+		return buffer.array();
+	}
 	
 	public static ServerHeader from(Bundle bundle) throws BufferUnderflowException {
 		ServerHeader result = new ServerHeader();

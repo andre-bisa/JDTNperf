@@ -12,6 +12,15 @@ public enum AckToMonitor {
 		this.val = val;
 	}
 	
+	static AckToMonitor getAckToMonitorFromValue(int value) {
+		for (AckToMonitor currentAck : AckToMonitor.values()) {
+			if ((value & currentAck.getValue()) == currentAck.getValue()) {
+				return currentAck;
+			}
+		}
+		throw new IllegalStateException("Ack to monitor not found.");
+	}
+	
 	short getValue() {
 		return this.val;
 	}
