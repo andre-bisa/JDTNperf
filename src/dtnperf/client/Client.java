@@ -11,6 +11,7 @@ import dtnperf.client.modes.Mode;
 import dtnperf.header.ClientHeader;
 import it.unibo.dtn.JAL.BPSocket;
 import it.unibo.dtn.JAL.Bundle;
+import it.unibo.dtn.JAL.BundleDeliveryOption;
 import it.unibo.dtn.JAL.BundleEID;
 import it.unibo.dtn.JAL.BundlePayload;
 import it.unibo.dtn.JAL.exceptions.JALUnregisterException;
@@ -112,6 +113,7 @@ public class Client implements Runnable {
 			
 			Bundle bundle = new Bundle(this.dest);
 			bundle.setReplyTo(this.replyTo);
+			bundle.addDeliveryOption(BundleDeliveryOption.DeliveryReceipt);
 			
 			ByteBuffer buffer = ByteBuffer.wrap(defaultByteBuffer(this.payloadSize));
 			ClientHeader header = new ClientHeader(bundle.getReplyTo(), this.mode.getClientMode(), this.congestionControl.isAckRequired());
