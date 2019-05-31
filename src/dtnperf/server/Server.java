@@ -20,7 +20,7 @@ public class Server implements Runnable {
 	private String demuxString;
 	private int demuxNumber;
 	
-	private Boolean running;
+	private Boolean running = false;
 	
 	public Server(String demuxString, int demuxNumber) {
 		this.demuxNumber = demuxNumber;
@@ -44,8 +44,9 @@ public class Server implements Runnable {
 	}
 	
 	public Thread start() {
-		Thread result = new Thread(this);
+		Thread result = new Thread(this, "JDTNperf server");
 		result.setDaemon(true);
+		result.start();
 		return result;
 	}
 	

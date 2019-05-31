@@ -21,7 +21,7 @@ public class Client implements Runnable {
 	private static final int DEMUXNUMBER = (int) (System.currentTimeMillis() % 100000 + 10000);
 	private static final String DEMUXSTRING = "dtnperf/client_" + System.currentTimeMillis();
 	
-	private Boolean running;
+	private Boolean running = false;
 	
 	private final BundleEID dest;
 	private final BundleEID replyTo;
@@ -113,12 +113,14 @@ public class Client implements Runnable {
 	public void stop() {
 		synchronized (this.running) {
 			this.running = false;
+			this.mode.forceTermination();
 		}
 	}
 	
 	public Thread start() {
-		Thread result = new Thread(this);
+		Thread result = new Thread(this, "JDTNperf client");
 		result.setDaemon(true);
+		result.start();
 		return result;
 	}
 	
