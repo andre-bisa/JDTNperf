@@ -21,6 +21,8 @@ public class Client implements Runnable {
 	private static final int DEMUXNUMBER = (int) (System.currentTimeMillis() % 100000 + 10000);
 	private static final String DEMUXSTRING = "dtnperf/client_" + System.currentTimeMillis();
 	
+	private Boolean running;
+	
 	private final BundleEID dest;
 	private final BundleEID replyTo;
 	private int payloadSize;
@@ -102,8 +104,31 @@ public class Client implements Runnable {
 		return result.toString();
 	}
 	
+	public boolean isRunning() {
+		synchronized (this.running) {
+			return this.running;
+		}
+	}
+	
+	public void stop() {
+		synchronized (this.running) {
+			this.running = false;
+		}
+	}
+	
+	public Thread start() {
+		Thread result = new Thread(this);
+		result.setDaemon(true);
+		return result;
+	}
+	
 	@Override
 	public void run() {
+		synchronized (this.running) {
+			if (this.running)
+				return;
+			this.running = true;
+		}
 		try {
 			BPSocket socket = BPSocket.register(DEMUXSTRING, DEMUXNUMBER);
 			
@@ -122,6 +147,7 @@ public class Client implements Runnable {
 			
 			ClientSender clientSender = new ClientSender(socket, bundle, this.congestionControl.getSemaphore());
 			clientSender.setMode(this.mode);
+			clientSender.setClient(this);
 			
 			Thread congestionControlThread = new Thread(this.congestionControl);
 			congestionControlThread.setDaemon(true);
@@ -150,6 +176,7 @@ public class Client implements Runnable {
 				socket.unregister();
 			} catch (JALUnregisterException e) {}
 		} catch (Exception e) {
+			this.stop();
 			e.printStackTrace();
 		}
 	}

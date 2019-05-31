@@ -17,22 +17,59 @@ public class Server implements Runnable {
 	private static final int DEMUXNUMBER = 2000;
 	private static final String DEMUXSTRING = "dtnperf/server";
 	
+	private String demuxString;
+	private int demuxNumber;
+	
+	private Boolean running;
+	
+	public Server(String demuxString, int demuxNumber) {
+		this.demuxNumber = demuxNumber;
+		this.demuxString = demuxString;
+	}
+	
+	public Server() {
+		this(DEMUXSTRING, DEMUXNUMBER);
+	}
+	
+	public boolean isRunning() {
+		synchronized (this.running) {
+			return this.running;
+		}
+	}
+	
+	public void stop() {
+		synchronized (this.running) {
+			this.running = false;
+		}
+	}
+	
+	public Thread start() {
+		Thread result = new Thread(this);
+		result.setDaemon(true);
+		return result;
+	}
+	
 	@Override
 	public void run() {
+		synchronized (this.running) {
+			if (this.running)
+				return;
+			this.running = true;
+		}
+		
 		BPSocket socket = null;
 		try {
-			socket = BPSocket.register(DEMUXSTRING, DEMUXNUMBER);
+			socket = BPSocket.register(this.demuxString, this.demuxNumber);
 		} catch (JALRegisterException e) {
 			System.err.println("Error on registering DTN socket.");
 			System.exit(1);
 		}
-		while (true) {
+		
+		while (this.isRunning()) {
 			Bundle bundle = null;
 			try {
 				bundle = socket.receive();
-			} catch (JALTimeoutException e) {
-				continue;
-			} catch (JALReceptionInterruptedException e) {
+			} catch (JALTimeoutException | JALReceptionInterruptedException e) {
 				continue;
 			} catch (JALNotRegisteredException | JALReceiveException e) {
 				System.err.println("Error on receiving bundle.");
@@ -60,7 +97,7 @@ public class Server implements Runnable {
 				
 				System.out.println("Sent bundle ack to " + replyBundle.getDestination());
 			}
-		}
+		} // while
 	}
 
 }

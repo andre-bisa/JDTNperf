@@ -13,6 +13,7 @@ class ClientSender implements Runnable {
 	private BPSocket socket;
 
 	private Mode mode;
+	private Client client;
 
 	public ClientSender(BPSocket socket, Bundle bundle, Semaphore semaphore) {
 		this.socket = socket;
@@ -28,10 +29,14 @@ class ClientSender implements Runnable {
 		this.mode = mode;
 	}
 
+	void setClient(Client client) {
+		this.client = client;
+	}
+
 	@Override
 	public void run() {
 		try {
-			while (!this.mode.isTerminated()) {
+			while (!this.mode.isTerminated() && this.client.isRunning()) {
 				this.semaphore.acquire();
 				if (this.mode.isTerminated()) continue;
 				try {
@@ -43,6 +48,8 @@ class ClientSender implements Runnable {
 			}
 		} catch (InterruptedException e) {
 
+		} catch(Exception e) {
+			
 		}
 	}
 
