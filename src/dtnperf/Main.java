@@ -2,10 +2,13 @@ package dtnperf;
 
 import java.util.ArrayList;
 
+import dtnperf.gui.Gui;
+
 public class Main {
 
 	private static final String CLIENTSTRING = "--client";
 	private static final String SERVERSTRING = "--server";
+	private static final String GUISTRING = "--gui";
 	
 	public static void main(String[] args) throws Exception {
 		System.out.println("JDTNperf 1.0");
@@ -26,6 +29,10 @@ public class Main {
 
 		case SERVERSTRING:
 			MainServer.main(newArguments);
+			break;
+			
+		case GUISTRING:
+			Gui.main(args);
 			break;
 			
 		default:
