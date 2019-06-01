@@ -13,11 +13,13 @@ import dtnperf.client.Client;
 import dtnperf.client.ClientCongestionControl;
 import dtnperf.client.ClientCongestionControlRate;
 import dtnperf.client.ClientCongestionControlWindow;
+import dtnperf.client.DataMode;
+import dtnperf.client.DataUnit;
+import dtnperf.client.Mode;
 import dtnperf.client.RateUnit;
-import dtnperf.client.modes.DataMode;
-import dtnperf.client.modes.DataUnit;
-import dtnperf.client.modes.Mode;
-import dtnperf.client.modes.TimeMode;
+import dtnperf.client.TimeMode;
+import dtnperf.event.BundleSentListener;
+import it.unibo.dtn.JAL.Bundle;
 import it.unibo.dtn.JAL.BundleEID;
 import it.unibo.dtn.JAL.JALEngine;
 
@@ -34,9 +36,14 @@ public class MainClient {
 		parse(args);
 		
 		Client client = new Client(destination, replyTo, congestionControl, mode, payloadSize, payloadUnit);
-		Thread clientThread = new Thread(client);
+		client.addBundleSentListener(new BundleSentListener() {
+			@Override
+			public void bundleSentEvent(Bundle bundleSent) {
+				System.out.println("Sent bundle of size " + bundleSent.getData().length + " to " + bundleSent.getDestination());
+			}
+		});
+		Thread clientThread = client.start();
 		
-		clientThread.start();
 		clientThread.join();
 		
 		System.out.println("\nTotal execution time = " + client.getTotalExecutionTime() / 10d + "s");

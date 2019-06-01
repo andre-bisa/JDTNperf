@@ -1,6 +1,7 @@
 package dtnperf.gui;
 
 import java.awt.BorderLayout;
+import java.awt.Dimension;
 import java.awt.EventQueue;
 import java.awt.FlowLayout;
 import java.awt.event.ActionEvent;
@@ -9,6 +10,7 @@ import java.time.temporal.ChronoUnit;
 
 import javax.swing.ButtonGroup;
 import javax.swing.DefaultComboBoxModel;
+import javax.swing.DefaultListModel;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JFrame;
@@ -28,20 +30,32 @@ import com.jgoodies.forms.layout.FormLayout;
 import com.jgoodies.forms.layout.FormSpecs;
 import com.jgoodies.forms.layout.RowSpec;
 
+import dtnperf.client.Client;
 import dtnperf.client.ClientCongestionControl;
 import dtnperf.client.ClientCongestionControlRate;
 import dtnperf.client.ClientCongestionControlWindow;
+import dtnperf.client.DataMode;
+import dtnperf.client.DataUnit;
+import dtnperf.client.Mode;
 import dtnperf.client.RateUnit;
-import dtnperf.client.modes.DataMode;
-import dtnperf.client.modes.DataUnit;
-import dtnperf.client.modes.Mode;
-import dtnperf.client.modes.TimeMode;
+import dtnperf.client.TimeMode;
+import dtnperf.event.BundleReceivedListener;
+import dtnperf.event.BundleSentListener;
+import dtnperf.server.Server;
+import it.unibo.dtn.JAL.Bundle;
 import it.unibo.dtn.JAL.BundleEID;
+import javax.swing.JList;
+import javax.swing.ListSelectionModel;
+import javax.swing.JScrollPane;
+import java.awt.Font;
+import javax.swing.event.ListSelectionListener;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.ScrollPaneConstants;
 
 public class Gui {
 
 	private ServerGuiController serverGuiController = new ServerGuiController();
-	private ClientGuiController clientGuiController = new ClientGuiController();
+	private ClientStatusUpdater statusUpdater;
 
 	private JFrame frame;
 	private JTextField textDestination;
@@ -79,7 +93,7 @@ public class Gui {
 		JButton buttonStopServer = new JButton("Stop server");
 
 		frame = new JFrame();
-		frame.setBounds(100, 100, 708, 484);
+		frame.setBounds(100, 100, 800, 500);
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
 		JPanel containerPanel = new JPanel();
@@ -104,8 +118,8 @@ public class Gui {
 		JPanel panelClientConfiguration = new JPanel();
 		panelClientWest.add(panelClientConfiguration, BorderLayout.CENTER);
 		panelClientConfiguration.setLayout(new FormLayout(new ColumnSpec[] {
-				ColumnSpec.decode("211px"),
-				ColumnSpec.decode("325px"),},
+				ColumnSpec.decode("max(88dlu;pref):grow"),
+				ColumnSpec.decode("max(140dlu;pref):grow"),},
 				new RowSpec[] {
 						FormSpecs.LABEL_COMPONENT_GAP_ROWSPEC,
 						RowSpec.decode("50px"),
@@ -119,6 +133,7 @@ public class Gui {
 		panelClientConfiguration.add(labelClientDestination, "1, 2, fill, fill");
 
 		textDestination = new JTextField();
+		textDestination.setFont(new Font("Dialog", Font.BOLD, 16));
 		textDestination.setHorizontalAlignment(SwingConstants.CENTER);
 		panelClientConfiguration.add(textDestination, "2, 2, fill, fill");
 		textDestination.setColumns(10);
@@ -128,25 +143,26 @@ public class Gui {
 		panelClientConfiguration.add(labelClientReplyTo, "1, 3, fill, fill");
 
 		textReplyTo = new JTextField();
+		textReplyTo.setFont(new Font("Dialog", Font.BOLD, 16));
 		textReplyTo.setHorizontalAlignment(SwingConstants.CENTER);
 		textReplyTo.setColumns(10);
 		panelClientConfiguration.add(textReplyTo, "2, 3, fill, fill");
 
-		JLabel labelCongestionControlMode = new JLabel("Conestion control mode");
+		JLabel labelCongestionControlMode = new JLabel("Congestion control mode");
 		labelCongestionControlMode.setHorizontalAlignment(SwingConstants.CENTER);
 		panelClientConfiguration.add(labelCongestionControlMode, "1, 4, fill, fill");
 
 		JPanel panelClientCongestionControl = new JPanel();
 		panelClientConfiguration.add(panelClientCongestionControl, "2, 4, fill, fill");
 		panelClientCongestionControl.setLayout(new FormLayout(new ColumnSpec[] {
-				FormSpecs.UNRELATED_GAP_COLSPEC,
-				ColumnSpec.decode("35px"),
-				FormSpecs.LABEL_COMPONENT_GAP_COLSPEC,
-				ColumnSpec.decode("71px"),
-				FormSpecs.LABEL_COMPONENT_GAP_COLSPEC,
-				ColumnSpec.decode("71px"),
-				FormSpecs.LABEL_COMPONENT_GAP_COLSPEC,
-				ColumnSpec.decode("90px"),},
+				ColumnSpec.decode("7dlu:grow"),
+				ColumnSpec.decode("35px:grow"),
+				ColumnSpec.decode("3dlu:grow"),
+				ColumnSpec.decode("71px:grow"),
+				ColumnSpec.decode("3dlu:grow"),
+				ColumnSpec.decode("71px:grow"),
+				ColumnSpec.decode("3dlu:grow"),
+				ColumnSpec.decode("90px:grow"),},
 				new RowSpec[] {
 						FormSpecs.LINE_GAP_ROWSPEC,
 						RowSpec.decode("24px"),
@@ -158,6 +174,7 @@ public class Gui {
 		panelClientCongestionControl.add(radioClientCongestionControlRate, "2, 2, fill, default");
 
 		JLabel labelClientCongestionControlRate = new JLabel("Rate");
+		labelClientCongestionControlRate.setLabelFor(radioClientCongestionControlRate);
 		labelClientCongestionControlRate.setHorizontalAlignment(SwingConstants.CENTER);
 		panelClientCongestionControl.add(labelClientCongestionControlRate, "4, 2, center, center");
 
@@ -177,6 +194,7 @@ public class Gui {
 		panelClientCongestionControl.add(radioClientCongestionControlWindow, "2, 4, fill, default");
 
 		JLabel labelClientCongestionControlWindow = new JLabel("Window");
+		labelClientCongestionControlWindow.setLabelFor(radioClientCongestionControlWindow);
 		panelClientCongestionControl.add(labelClientCongestionControlWindow, "4, 4, center, center");
 
 		JSpinner windowValue = new JSpinner();
@@ -209,6 +227,7 @@ public class Gui {
 		panelClientMode.add(radioDataMode, "2, 2, fill, default");
 
 		JLabel labelDataMode = new JLabel("Data");
+		labelDataMode.setLabelFor(radioDataMode);
 		panelClientMode.add(labelDataMode, "3, 2, left, center");
 
 		JSpinner dataModeValue = new JSpinner();
@@ -226,6 +245,7 @@ public class Gui {
 		panelClientMode.add(radioTimeMode, "2, 4, fill, default");
 
 		JLabel labelTimeMode = new JLabel("Time");
+		labelTimeMode.setLabelFor(radioTimeMode);
 		panelClientMode.add(labelTimeMode, "3, 4, left, center");
 
 		JSpinner timeModeValue = new JSpinner();
@@ -275,6 +295,19 @@ public class Gui {
 		JPanel panelClientEast = new JPanel();
 		panelClient.add(panelClientEast, BorderLayout.EAST);
 		panelClientEast.setLayout(new BorderLayout(0, 0));
+		panelClientEast.setMaximumSize(new Dimension(200, 800));
+
+		JList<ClientGuiController> listClientsRunning = new JList<>();
+		listClientsRunning.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+		listClientsRunning.setModel(new DefaultListModel<>());
+		
+		JScrollPane scrollPaneClientsRunning = new JScrollPane(listClientsRunning);
+		scrollPaneClientsRunning.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS);
+
+		JScrollPane scrollPaneClientsRunning2 = new JScrollPane(scrollPaneClientsRunning);
+		scrollPaneClientsRunning2.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_ALWAYS);
+		
+		panelClientEast.add(scrollPaneClientsRunning2, BorderLayout.CENTER);
 
 		JPanel panelServer = new JPanel();
 		tabbedPane.addTab("Server", null, panelServer, null);
@@ -302,11 +335,21 @@ public class Gui {
 
 		JPanel statusPanel = new JPanel();
 		containerPanel.add(statusPanel, BorderLayout.SOUTH);
-		statusPanel.setLayout(new BorderLayout(15, 15));
+		statusPanel.setLayout(new FormLayout(new ColumnSpec[] {
+				ColumnSpec.decode("center:max(200dlu;pref):grow"),
+				FormSpecs.LABEL_COMPONENT_GAP_COLSPEC,
+				ColumnSpec.decode("center:max(100dlu;pref):grow"),},
+				new RowSpec[] {
+						FormSpecs.LINE_GAP_ROWSPEC,
+						RowSpec.decode("15px"),}));
 
-		JLabel statusLabel = new JLabel("Status");
-		statusLabel.setHorizontalAlignment(SwingConstants.CENTER);
-		statusPanel.add(statusLabel, BorderLayout.CENTER);
+		JLabel statusClientLabel = new JLabel("");
+		statusClientLabel.setHorizontalAlignment(SwingConstants.CENTER);
+		statusPanel.add(statusClientLabel, "1, 2, fill, fill");
+
+		JLabel statusServerLabel = new JLabel("Server not running.");
+		statusServerLabel.setHorizontalAlignment(SwingConstants.CENTER);
+		statusPanel.add(statusServerLabel, "3, 2, fill, fill");
 
 
 		/*****  BUTTON HANDLERS *****/
@@ -314,9 +357,33 @@ public class Gui {
 		buttonStartServer.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent event) {
-				buttonStartServer.setEnabled(false);
-				buttonStopServer.setEnabled(true);
-				serverGuiController.startServer();
+				try {
+					Server server = serverGuiController.startServer();
+					server.addBundleReceivedListener(new BundleReceivedListener() {
+						@Override
+						public void bundleReceivedEvent(Bundle bundle) {
+							textAreaServer.append("Received bundle from " + bundle.getSource() + " of size " + bundle.getData().length + "\n");
+						}
+					});
+					server.addBundleSentListener(new BundleSentListener() {
+						@Override
+						public void bundleSentEvent(Bundle bundleSent) {
+							textAreaServer.append("Sent ack bundle to " + bundleSent.getDestination() + "\n");
+						}
+					});
+				} catch(Exception e) {
+					JOptionPane.showMessageDialog(null, "Error on creating server", "Error", JOptionPane.ERROR_MESSAGE);
+					return;
+				}
+				if (serverGuiController.isServerRunning()) {
+					buttonStartServer.setEnabled(false);
+					buttonStopServer.setEnabled(true);
+					statusServerLabel.setText("Server is running...");
+					try {
+						Thread.sleep(100);
+					} catch (InterruptedException e) {}
+					textAreaServer.append("Server opened on " + serverGuiController.getServer().getLocalEID().getEndpointID() + "\n");
+				}
 			}
 		});
 
@@ -325,10 +392,12 @@ public class Gui {
 			public void actionPerformed(ActionEvent event) {
 				serverGuiController.stopServer();
 				buttonStopServer.setEnabled(false);
+				statusServerLabel.setText("Server is stopping...");
 				new Thread(new Runnable() {
 					@Override
 					public void run() {
 						serverGuiController.waitForTerminating();
+						statusServerLabel.setText("Server stopped.");
 						buttonStartServer.setEnabled(true);
 					}
 				}).start();
@@ -386,13 +455,16 @@ public class Gui {
 					} catch (Exception e) {}
 					int payloadSizeNumber = (int) payloadSizeValue.getValue();
 					DataUnit payloadDataUnit = payloadUnit.getItemAt(payloadUnit.getSelectedIndex());
-					
+
 					if (dest == null || congestionControl == null || mode == null || payloadDataUnit == null)
 						throw new IllegalStateException();
-					
+
+					ClientGuiController clientGuiController = new ClientGuiController();
 					clientGuiController.startClient(dest, replyTo, congestionControl, mode, payloadSizeNumber, payloadDataUnit);
-					buttonStartClient.setEnabled(false);
-					buttonStopClient.setEnabled(true);
+					DefaultListModel<ClientGuiController> model = (DefaultListModel<ClientGuiController>) listClientsRunning.getModel();
+					model.addElement(clientGuiController);
+					Thread.sleep(100);
+					listClientsRunning.setSelectedValue(clientGuiController, true);
 					new Thread(new Runnable() {
 						@Override
 						public void run() {
@@ -400,19 +472,22 @@ public class Gui {
 							buttonStopClient.doClick();
 						}
 					}).start();
-					
+
 				} catch (Exception e) {
 					JOptionPane.showMessageDialog(null, "Error on creating client", "Error", JOptionPane.ERROR_MESSAGE);
 					buttonStopClient.doClick();
 				}
 			}
 		});
-		
+
 		buttonStopClient.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent event) {
-				clientGuiController.stopClient();
+				ClientGuiController clientGuiController = listClientsRunning.getSelectedValue();
 				buttonStopClient.setEnabled(false);
+				if (clientGuiController == null)
+					return;
+				clientGuiController.stopClient();
 				new Thread(new Runnable() {
 					@Override
 					public void run() {
@@ -422,7 +497,95 @@ public class Gui {
 				}).start();
 			}
 		});
-	}
+
+		listClientsRunning.addListSelectionListener(new ListSelectionListener() {
+			public void valueChanged(ListSelectionEvent event) {
+				buttonStopClient.setEnabled(event.getLastIndex() >= 0 && listClientsRunning.getSelectedValue().isClientRuning());
+			}
+		});
+
+		this.statusUpdater = new ClientStatusUpdater(listClientsRunning, statusClientLabel);
+		this.statusUpdater.start();
+
+	} // initialize
 
 }
 
+class ClientStatusUpdater implements Runnable, BundleSentListener {
+
+	private JList<ClientGuiController> listRunningClients;
+	private JLabel labelClientStatus;
+	
+	private ClientGuiController clientGuiController = null;
+
+	public ClientStatusUpdater(JList<ClientGuiController> list, JLabel label) {
+		this.listRunningClients = list;
+		this.labelClientStatus = label;
+	}
+
+	@Override
+	public void run() {
+		ClientGuiController clientController;
+		while (true) {
+			try {
+				try {
+					Thread.sleep(100);
+				} catch (InterruptedException e) {
+					break;
+				}
+				clientController = this.listRunningClients.getSelectedValue();
+				
+				if (clientController == this.clientGuiController) {
+					if (clientController.isClientRuning())
+						continue;
+					this.updateStatus();
+				}
+				
+				if (this.clientGuiController != null) { // unhandle from listener
+					this.clientGuiController.getClient().removeBundleSentListener(this);
+				}
+				
+				if (clientController == null) {
+					this.labelClientStatus.setText("");
+				} else { // handle from listener
+					clientController.getClient().addBundleSentListener(this);
+				}
+				
+				this.clientGuiController = clientController;
+			} catch (Exception e) {}
+		}
+	}
+	
+	private void updateStatus() {
+		if (this.clientGuiController == null)
+			return;
+		
+		Client client = this.clientGuiController.getClient();
+		StringBuilder status = new StringBuilder();
+		if (this.clientGuiController.isClientRuning()) {
+			status.append(client);
+			status.append(" sent bundles: ");
+			status.append(client.getSentBundles());
+			status.append(" sent data: ");
+			status.append(client.getDataSent());
+			status.append(" bytes");
+		} else {
+			status.append(client);
+			status.append(' ');
+			status.append(client.getResultString());
+		}
+		this.labelClientStatus.setText(status.toString());
+	}
+
+	public void start() {
+		Thread t = new Thread(this, "Client status updater");
+		t.setDaemon(true);
+		t.start();
+	}
+
+	@Override
+	public void bundleSentEvent(Bundle bundleSent) {
+		this.updateStatus();
+	}
+
+}

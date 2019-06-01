@@ -29,6 +29,7 @@ public class ClientCongestionControlWindow extends ClientCongestionControl {
 			Bundle bundle;
 			try {
 				bundle = this.getSocket().receive();
+				this.signal(bundle);
 				ServerHeader serverHeader = ServerHeader.from(bundle);
 				if (this.checkServerHeader(serverHeader))
 					headerOK = true;

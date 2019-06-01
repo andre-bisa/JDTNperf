@@ -5,9 +5,10 @@ import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
+import java.util.concurrent.ConcurrentLinkedDeque;
 
-import dtnperf.client.modes.DataUnit;
-import dtnperf.client.modes.Mode;
+import dtnperf.event.BundleReceivedListener;
+import dtnperf.event.BundleSentListener;
 import dtnperf.header.ClientHeader;
 import it.unibo.dtn.JAL.BPSocket;
 import it.unibo.dtn.JAL.Bundle;
@@ -18,10 +19,12 @@ import it.unibo.dtn.JAL.exceptions.JALUnregisterException;
 
 public class Client implements Runnable {
 	
-	private static final int DEMUXNUMBER = (int) (System.currentTimeMillis() % 100000 + 10000);
-	private static final String DEMUXSTRING = "dtnperf/client_" + System.currentTimeMillis();
+	private static final String DEMUXSTRING = "dtnperf/client_";
 	
+	private ConcurrentLinkedDeque<BundleSentListener> bundleSentListeners = new ConcurrentLinkedDeque<>();
+	private ConcurrentLinkedDeque<BundleReceivedListener> bundleReceivedListeners = new ConcurrentLinkedDeque<>();
 	private Boolean running = false;
+	private BundleEID localEID;
 	
 	private final BundleEID dest;
 	private final BundleEID replyTo;
@@ -32,6 +35,9 @@ public class Client implements Runnable {
 	private ClientCongestionControl congestionControl;
 	private final Mode mode;
 	
+	private int demuxNumber;
+	private String demuxString;
+	
 	public Client(BundleEID dest, BundleEID replyTo, ClientCongestionControl congestionControl, Mode mode, int payloadSizeNumber, DataUnit payloadUnit) {
 		this.dest = dest;
 		this.replyTo = replyTo;
@@ -40,6 +46,11 @@ public class Client implements Runnable {
 		this.mode.setClient(this);
 		this.payloadSize = (int) (payloadSizeNumber * payloadUnit.getBytes());
 		this.totalExecutionTime = 0L;
+		
+		this.bundleSentListeners.add(this.mode.getBundleSentListener()); // Add mode listener to the listeners
+		
+		this.demuxNumber = (int) (System.currentTimeMillis() % 100000 + 10000);
+		this.demuxString = DEMUXSTRING + System.currentTimeMillis();
 	}
 	
 	public Client(BundleEID dest, BundleEID replyTo, ClientCongestionControl congestionControl, Mode mode) {
@@ -104,6 +115,39 @@ public class Client implements Runnable {
 		return result.toString();
 	}
 	
+	@Override
+	public String toString() {
+		StringBuilder result = new StringBuilder();
+		result.append("JDTNperf client ");
+		final boolean running;
+		synchronized (this.running) {
+			running = this.running;
+		}
+		if (!running) {
+			result.append("not running");
+		} else {
+			result.append("running on ");
+			result.append(this.localEID);
+		}
+		return result.toString();
+	}
+	
+	public void addBundleSentListener(BundleSentListener listener) {
+		this.bundleSentListeners.add(listener);
+	}
+	
+	public boolean removeBundleSentListener(BundleSentListener listener) {
+		return this.bundleSentListeners.remove(listener);
+	}
+	
+	public void addBundleReceivedListener(BundleReceivedListener listener) {
+		this.bundleReceivedListeners.add(listener);
+	}
+	
+	public boolean removeBundleReceivedListener(BundleReceivedListener listener) {
+		return this.bundleReceivedListeners.remove(listener);
+	}
+	
 	public boolean isRunning() {
 		synchronized (this.running) {
 			return this.running;
@@ -132,7 +176,8 @@ public class Client implements Runnable {
 			this.running = true;
 		}
 		try {
-			BPSocket socket = BPSocket.register(DEMUXSTRING, DEMUXNUMBER);
+			BPSocket socket = BPSocket.register(this.demuxString, this.demuxNumber);
+			this.localEID = socket.getLocalEID();
 			
 			this.congestionControl.setSocket(socket);
 			this.congestionControl.setMode(this.mode);
@@ -150,6 +195,9 @@ public class Client implements Runnable {
 			ClientSender clientSender = new ClientSender(socket, bundle, this.congestionControl.getSemaphore());
 			clientSender.setMode(this.mode);
 			clientSender.setClient(this);
+			
+			clientSender.setBundleSentListeners(this.bundleSentListeners);
+			congestionControl.setBundleReceivedListeners(this.bundleReceivedListeners);
 			
 			Thread congestionControlThread = new Thread(this.congestionControl);
 			congestionControlThread.setDaemon(true);

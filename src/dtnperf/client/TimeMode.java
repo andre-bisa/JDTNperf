@@ -1,4 +1,4 @@
-package dtnperf.client.modes;
+package dtnperf.client;
 
 import java.time.Duration;
 import java.time.LocalDateTime;

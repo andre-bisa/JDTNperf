@@ -1,7 +1,5 @@
 package dtnperf.client;
 
-import dtnperf.client.modes.DataUnit;
-
 public enum RateUnit {
 KILOBIT, MEGABIT, BUNDLE;
 	

@@ -8,13 +8,18 @@ public class ServerGuiController {
 	
 	public ServerGuiController() {}
 	
-	public void startServer() {
+	public Server startServer() {
 		this.server = new Server();
 		this.serverThread = this.server.start();
+		return this.server;
 	}
 	
 	public void stopServer() {
 		this.server.stop();
+	}
+	
+	public Server getServer() {
+		return this.server;
 	}
 	
 	public void waitForTerminating() {

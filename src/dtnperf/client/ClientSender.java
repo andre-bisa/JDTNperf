@@ -1,8 +1,9 @@
 package dtnperf.client;
 
+import java.util.Collection;
 import java.util.concurrent.Semaphore;
 
-import dtnperf.client.modes.Mode;
+import dtnperf.event.BundleSentListener;
 import it.unibo.dtn.JAL.BPSocket;
 import it.unibo.dtn.JAL.Bundle;
 
@@ -14,6 +15,8 @@ class ClientSender implements Runnable {
 
 	private Mode mode;
 	private Client client;
+	
+	private Collection<BundleSentListener> bundleSentListeners;
 
 	public ClientSender(BPSocket socket, Bundle bundle, Semaphore semaphore) {
 		this.socket = socket;
@@ -41,7 +44,7 @@ class ClientSender implements Runnable {
 				if (this.mode.isTerminated()) continue;
 				try {
 					this.socket.send(this.bundle);
-					this.mode.bundleSent();
+					this.signal();
 				} catch (Exception e) {
 					continue;
 				}
@@ -51,6 +54,16 @@ class ClientSender implements Runnable {
 		} catch(Exception e) {
 			
 		}
+	}
+	
+	private void signal() {
+		for (BundleSentListener listener : bundleSentListeners) {
+			listener.bundleSentEvent(this.bundle);
+		}
+	}
+
+	void setBundleSentListeners(Collection<BundleSentListener> bundleSentListeners) {
+		this.bundleSentListeners = bundleSentListeners;
 	}
 
 }

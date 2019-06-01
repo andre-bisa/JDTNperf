@@ -1,9 +1,11 @@
 package dtnperf.client;
 
+import java.util.Collection;
 import java.util.concurrent.Semaphore;
 
-import dtnperf.client.modes.Mode;
+import dtnperf.event.BundleReceivedListener;
 import it.unibo.dtn.JAL.BPSocket;
+import it.unibo.dtn.JAL.Bundle;
 
 public abstract class ClientCongestionControl implements Runnable {
 
@@ -11,6 +13,8 @@ public abstract class ClientCongestionControl implements Runnable {
 	private BPSocket socket;
 	private Mode mode;
 	private Client client;
+	
+	private Collection<BundleReceivedListener> listeners;
 
 	protected ClientCongestionControl(Semaphore semaphore) {
 		this.semaphore = semaphore;
@@ -38,6 +42,16 @@ public abstract class ClientCongestionControl implements Runnable {
 
 	void setSocket(BPSocket socket) {
 		this.socket = socket;
+	}
+	
+	void setBundleReceivedListeners(Collection<BundleReceivedListener> listeners) {
+		this.listeners = listeners;
+	}
+	
+	protected final void signal(Bundle bundle) {
+		for (BundleReceivedListener listener : this.listeners) {
+			listener.bundleReceivedEvent(bundle);
+		}
 	}
 
 	protected BPSocket getSocket() {

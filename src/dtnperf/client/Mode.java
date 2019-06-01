@@ -1,27 +1,34 @@
-package dtnperf.client.modes;
+package dtnperf.client;
 
 import java.util.concurrent.Semaphore;
 
-import dtnperf.client.Client;
+import dtnperf.event.BundleSentListener;
 import dtnperf.header.ClientMode;
+import it.unibo.dtn.JAL.Bundle;
 
 public abstract class Mode {
-	
+
 	private long sentBundles;
 	private long dataSent;
-	
+
 	private Client client;
 	private boolean forceTermination;
-	
+
 	private Semaphore semaphore;
-	
+	private BundleSentListener bundleSentListener = new BundleSentListener() {
+		@Override
+		public void bundleSentEvent(Bundle bundleSent) {
+			bundleSent();
+		}
+	};;
+
 	protected Mode() {
 		this.sentBundles = 0L;
 		this.dataSent = 0L;
 		this.forceTermination = false;
 		this.semaphore = new Semaphore(0);
 	}
-	
+
 	public boolean isTerminated() {
 		if (this.forceTermination || this.isModeTerminated()) {
 			this.semaphore.release();
@@ -30,38 +37,38 @@ public abstract class Mode {
 			return false;
 		}
 	}
-	
+
 	public void waitForTerminating() {
 		this.semaphore.acquireUninterruptibly();
 		this.semaphore.drainPermits();
 	}
-	
+
 	public abstract void start();
-	
+
 	protected abstract boolean isModeTerminated();
-	
+
 	protected abstract void sentBundle();
-	
+
 	public abstract ClientMode getClientMode();
-	
+
 	public void forceTermination() {
 		this.forceTermination = true;
 	}
-	
+
 	protected Client getClient() {
 		return this.client;
 	}
-	
-	public void setClient(Client client) {
+
+	void setClient(Client client) {
 		this.client = client;
 	}
-	
-	public void bundleSent() {
+
+	private void bundleSent() {
 		this.sentBundles++;
 		this.dataSent += this.client.getPayloadSize();
 		this.sentBundle();
 	}
-	
+
 	public long getSentBundles() {
 		return this.sentBundles;
 	}
@@ -69,5 +76,9 @@ public abstract class Mode {
 	public long getDataSent() {
 		return this.dataSent;
 	}
-	
+
+	BundleSentListener getBundleSentListener() {
+		return this.bundleSentListener ;
+	}
+
 }

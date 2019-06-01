@@ -1,4 +1,4 @@
-package dtnperf.client.modes;
+package dtnperf.client;
 
 import dtnperf.header.ClientMode;
 

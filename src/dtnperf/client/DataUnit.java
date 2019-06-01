@@ -1,4 +1,4 @@
-package dtnperf.client.modes;
+package dtnperf.client;
 
 public enum DataUnit {
 BYTES, KIBIBYTES, KILOBYTES, MEBIBYTES, MEGABYTES, GIBIBYTES, GIGABYTES, TEBIBYTES, TERABYTES, PEBIBYTES, PETABYTES;
