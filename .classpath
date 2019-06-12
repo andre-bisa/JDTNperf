@@ -10,6 +10,10 @@
 	<classpathentry kind="lib" path="libs"/>
 	<classpathentry kind="lib" path="libs/jgoodies-forms-1.8.0.jar" sourcepath="libs/jgoodies-forms-1.8.0-sources.jar"/>
 	<classpathentry kind="lib" path="libs/jgoodies-common-1.8.0.jar"/>
-	<classpathentry kind="lib" path="libs/JAL-1.0.4.jar"/>
+	<classpathentry kind="lib" path="libs/JAL-1.0.9.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:platform:/resource/JDTNPerf/libs/JAL-1.0.9.jar!/doc"/>
+		</attributes>
+	</classpathentry>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
