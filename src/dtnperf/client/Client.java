@@ -14,7 +14,6 @@ import it.unibo.dtn.JAL.BPSocket;
 import it.unibo.dtn.JAL.Bundle;
 import it.unibo.dtn.JAL.BundleDeliveryOption;
 import it.unibo.dtn.JAL.BundleEID;
-import it.unibo.dtn.JAL.BundlePayload;
 import it.unibo.dtn.JAL.exceptions.JALUnregisterException;
 
 public class Client implements Runnable {
@@ -190,7 +189,7 @@ public class Client implements Runnable {
 			ByteBuffer buffer = ByteBuffer.wrap(defaultByteBuffer(this.payloadSize));
 			ClientHeader header = new ClientHeader(bundle.getReplyTo(), this.mode.getClientMode(), this.congestionControl.isAckRequired());
 			header.insertHeaderInByteBuffer(buffer);
-			bundle.setPayload(BundlePayload.of(buffer.array()));
+			bundle.setData(buffer.array());
 			
 			ClientSender clientSender = new ClientSender(socket, bundle, this.congestionControl.getSemaphore());
 			clientSender.setMode(this.mode);
@@ -199,10 +198,10 @@ public class Client implements Runnable {
 			clientSender.setBundleSentListeners(this.bundleSentListeners);
 			congestionControl.setBundleReceivedListeners(this.bundleReceivedListeners);
 			
-			Thread congestionControlThread = new Thread(this.congestionControl);
+			Thread congestionControlThread = new Thread(this.congestionControl, "JDTNperf congestion control");
 			congestionControlThread.setDaemon(true);
 			
-			Thread clientSenderThread = new Thread(clientSender);
+			Thread clientSenderThread = new Thread(clientSender, "JDTNperf client sender");
 			clientSenderThread.setDaemon(true);
 			
 			final LocalDateTime start = LocalDateTime.now();
