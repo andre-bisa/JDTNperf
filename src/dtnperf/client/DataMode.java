@@ -12,7 +12,11 @@ public class DataMode extends Mode {
 	
 	@Override
 	public boolean isModeTerminated() {
-		return (this.getDataSent() + this.getClient().getPayloadSize() > this.maxData); // I can send one more bundle
+		final boolean result = (this.getDataSent() + this.getClient().getPayloadSize() > this.maxData); // I can send one more bundle
+		if (result) {
+			super.setStop();
+		}
+		return result;
 	}
 
 	@Override
@@ -25,7 +29,7 @@ public class DataMode extends Mode {
 	}
 
 	@Override
-	public void start() {
+	public void _start() {
 	}
 
 }

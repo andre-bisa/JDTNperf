@@ -19,7 +19,11 @@ public class TimeMode extends Mode {
 	
 	@Override
 	public boolean isModeTerminated() {
-		return LocalDateTime.now().isAfter(this.stopTime);
+		final boolean result = LocalDateTime.now().isAfter(this.stopTime);
+		if (result) {
+			super.setStop();
+		}
+		return result;
 	}
 
 	@Override
@@ -32,8 +36,8 @@ public class TimeMode extends Mode {
 	}
 
 	@Override
-	public void start() {
-		this.stopTime = LocalDateTime.now().plus(Duration.of(this.time, this.unit));
+	public void _start() {
+		this.stopTime = super.getStartTime().plus(Duration.of(this.time, this.unit));
 	}
 
 }

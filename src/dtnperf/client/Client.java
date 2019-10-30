@@ -204,14 +204,14 @@ public class Client implements Runnable {
 			Thread clientSenderThread = new Thread(clientSender, "JDTNperf client sender");
 			clientSenderThread.setDaemon(true);
 			
-			final LocalDateTime start = LocalDateTime.now();
 			mode.start();
 			congestionControlThread.start();
 			clientSenderThread.start();
 			
 			this.mode.waitForTerminating();
 			
-			final LocalDateTime stop = LocalDateTime.now();
+			final LocalDateTime start = mode.getStartTime();
+			final LocalDateTime stop = mode.getStopTime();
 			
 			this.totalExecutionTime = ChronoUnit.MILLIS.between(start, stop) / 100;
 			

@@ -1,5 +1,6 @@
 package dtnperf.client;
 
+import java.time.LocalDateTime;
 import java.util.concurrent.Semaphore;
 
 import dtnperf.event.BundleSentListener;
@@ -13,6 +14,9 @@ public abstract class Mode {
 
 	private Client client;
 	private boolean forceTermination;
+	
+	private LocalDateTime start;
+	private LocalDateTime stop;
 
 	private Semaphore semaphore;
 	private BundleSentListener bundleSentListener = new BundleSentListener() {
@@ -43,7 +47,16 @@ public abstract class Mode {
 		this.semaphore.drainPermits();
 	}
 
-	public abstract void start();
+	public void start() {
+		this.start = LocalDateTime.now();
+		this._start();
+	}
+	
+	protected void setStop() {
+		this.stop = LocalDateTime.now();
+	}
+	
+	protected abstract void _start();
 
 	protected abstract boolean isModeTerminated();
 
@@ -79,6 +92,14 @@ public abstract class Mode {
 
 	BundleSentListener getBundleSentListener() {
 		return this.bundleSentListener ;
+	}
+
+	public LocalDateTime getStartTime() {
+		return this.start;
+	}
+	
+	public LocalDateTime getStopTime() {
+		return this.stop;
 	}
 
 }
