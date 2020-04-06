@@ -31,9 +31,9 @@ import com.jgoodies.forms.layout.FormSpecs;
 import com.jgoodies.forms.layout.RowSpec;
 
 import dtnperf.client.Client;
-import dtnperf.client.ClientCongestionControl;
-import dtnperf.client.ClientCongestionControlRate;
-import dtnperf.client.ClientCongestionControlWindow;
+import dtnperf.client.CongestionControl;
+import dtnperf.client.RateCongestionControl;
+import dtnperf.client.WindowCongestionControl;
 import dtnperf.client.DataMode;
 import dtnperf.client.DataUnit;
 import dtnperf.client.Mode;
@@ -411,7 +411,7 @@ public class Gui {
 					BundleEID replyTo = BundleEID.NoneEndpoint;
 					if (textReplyTo.getText().length() > 0)
 						replyTo = BundleEID.of(textReplyTo.getText());
-					ClientCongestionControl congestionControl;
+					CongestionControl congestionControl;
 
 					if (radioClientCongestionControlRate.isSelected()) { // Rate
 						final int number;
@@ -420,14 +420,14 @@ public class Gui {
 						} catch (Exception e) {}
 						number = (int) rateValue.getValue();
 						RateUnit rateUnit = rateUnits.getItemAt(rateUnits.getSelectedIndex());
-						congestionControl = new ClientCongestionControlRate(number, rateUnit );
+						congestionControl = new RateCongestionControl(number, rateUnit );
 					} else { // Window
 						final int window;
 						try {
 							windowValue.commitEdit();
 						} catch (Exception e) {}
 						window = (int) windowValue.getValue();
-						congestionControl = new ClientCongestionControlWindow(window);
+						congestionControl = new WindowCongestionControl(window);
 					}
 
 					Mode mode;

@@ -1,81 +1,108 @@
 package dtnperf.client;
 
-import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
-import java.util.Arrays;
 import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 
 import dtnperf.event.BundleReceivedListener;
 import dtnperf.event.BundleSentListener;
-import dtnperf.header.ClientHeader;
 import it.unibo.dtn.JAL.BPSocket;
 import it.unibo.dtn.JAL.Bundle;
 import it.unibo.dtn.JAL.BundleDeliveryOption;
 import it.unibo.dtn.JAL.BundleEID;
-import it.unibo.dtn.JAL.exceptions.JALUnregisterException;
+import it.unibo.dtn.JAL.exceptions.JALNotRegisteredException;
+import it.unibo.dtn.JAL.exceptions.JALNullPointerException;
+import it.unibo.dtn.JAL.exceptions.JALReceiveException;
+import it.unibo.dtn.JAL.exceptions.JALReceiverException;
+import it.unibo.dtn.JAL.exceptions.JALReceptionInterruptedException;
+import it.unibo.dtn.JAL.exceptions.JALSendException;
+import it.unibo.dtn.JAL.exceptions.JALTimeoutException;
 
 public class Client implements Runnable {
 	
 	private static final String DEMUXSTRING = "dtnperf/client_";
+
+	private final int demuxNumber;
+	private final String demuxString;
 	
-	private ConcurrentLinkedDeque<BundleSentListener> bundleSentListeners = new ConcurrentLinkedDeque<>();
-	private ConcurrentLinkedDeque<BundleReceivedListener> bundleReceivedListeners = new ConcurrentLinkedDeque<>();
-	private Boolean running = false;
-	private BundleEID localEID;
+	private final ConcurrentLinkedDeque<BundleSentListener> bundleSentListeners = new ConcurrentLinkedDeque<>();
+	private final ConcurrentLinkedDeque<BundleReceivedListener> bundleReceivedListeners = new ConcurrentLinkedDeque<>();
 	
-	private final BundleEID dest;
+	private final BundleEID destination;
 	private final BundleEID replyTo;
-	private int payloadSize;
-	
-	private long totalExecutionTime;
-	
-	private ClientCongestionControl congestionControl;
+	private final CongestionControl congestionControl;
 	private final Mode mode;
+	private final int payloadSize;
 	
-	private int demuxNumber;
-	private String demuxString;
-	
-	public Client(BundleEID dest, BundleEID replyTo, ClientCongestionControl congestionControl, Mode mode, int payloadSizeNumber, DataUnit payloadUnit) {
-		this.dest = dest;
+	private int timeToLive = 60;
+
+	private final AtomicBoolean running = new AtomicBoolean(false);
+	private BPSocket socket;
+	private LocalDateTime startTime;
+	private long totalExecutionTime;
+	private AtomicLong sentData = new AtomicLong(0);
+	private AtomicLong sentBundles = new AtomicLong(0);;
+
+	public Client(BundleEID destination, BundleEID replyTo, CongestionControl congestionControl, Mode mode, int payloadSizeNumber, DataUnit payloadUnit) {
+		this.destination = destination;
 		this.replyTo = replyTo;
 		this.congestionControl = congestionControl;
 		this.mode = mode;
-		this.mode.setClient(this);
 		this.payloadSize = (int) (payloadSizeNumber * payloadUnit.getBytes());
-		this.totalExecutionTime = 0L;
-		
-		this.bundleSentListeners.add(this.mode.getBundleSentListener()); // Add mode listener to the listeners
 		
 		this.demuxNumber = (int) (System.currentTimeMillis() % 100000 + 10000);
 		this.demuxString = DEMUXSTRING + System.currentTimeMillis();
+		this.reset();
 	}
 	
-	public Client(BundleEID dest, BundleEID replyTo, ClientCongestionControl congestionControl, Mode mode) {
+	public Client(BundleEID dest, BundleEID replyTo, CongestionControl congestionControl, Mode mode) {
 		this(dest, replyTo, congestionControl, mode, 10,  DataUnit.KILOBYTES); // Default payload: 10KiB 
-	}
-	
-	private static byte[] defaultByteBuffer(int size) {
-		byte[] result = new byte[size];
-		Arrays.fill(result, StandardCharsets.UTF_8.encode("X").array()[0]);
-		return result;
-	}
-	
-	public long getTotalExecutionTime() {
-		return this.totalExecutionTime;
 	}
 	
 	public int getPayloadSize() {
 		return this.payloadSize;
 	}
-
-	public long getSentBundles() {
-		return this.mode.getSentBundles();
+	
+	public int getTimeToLive() {
+		return timeToLive;
 	}
 
+	public void setTimeToLive(int timeToLive) {
+		this.timeToLive = timeToLive;
+	}
+	
+	public BundleEID getReplyTo() {
+		return this.replyTo;
+	}
+	
+	public void addBundleSentListener(BundleSentListener listener) {
+		this.bundleSentListeners.add(listener);
+	}
+	
+	public boolean removeBundleSentListener(BundleSentListener listener) {
+		return this.bundleSentListeners.remove(listener);
+	}
+	
+	public void addBundleReceivedListener(BundleReceivedListener listener) {
+		this.bundleReceivedListeners.add(listener);
+	}
+	
+	public boolean removeBundleReceivedListener(BundleReceivedListener listener) {
+		return this.bundleReceivedListeners.remove(listener);
+	}
+	
 	public long getDataSent() {
-		return this.mode.getDataSent();
+		return this.sentData.get();
+	}
+	
+	public long getSentBundles() {
+		return this.sentBundles.get();
+	}
+	
+	public long getTotalExecutionTime() {
+		return this.totalExecutionTime;
 	}
 	
 	public String getResultString() {
@@ -114,122 +141,104 @@ public class Client implements Runnable {
 		return result.toString();
 	}
 	
-	@Override
-	public String toString() {
-		StringBuilder result = new StringBuilder();
-		result.append("JDTNperf client ");
-		final boolean running;
-		synchronized (this.running) {
-			running = this.running;
-		}
-		if (!running) {
-			result.append("not running");
-		} else {
-			result.append("running on ");
-			result.append(this.localEID);
-		}
-		return result.toString();
-	}
-	
-	public void addBundleSentListener(BundleSentListener listener) {
-		this.bundleSentListeners.add(listener);
-	}
-	
-	public boolean removeBundleSentListener(BundleSentListener listener) {
-		return this.bundleSentListeners.remove(listener);
-	}
-	
-	public void addBundleReceivedListener(BundleReceivedListener listener) {
-		this.bundleReceivedListeners.add(listener);
-	}
-	
-	public boolean removeBundleReceivedListener(BundleReceivedListener listener) {
-		return this.bundleReceivedListeners.remove(listener);
-	}
-	
 	public boolean isRunning() {
-		synchronized (this.running) {
-			return this.running;
-		}
+		return this.running.get();
 	}
 	
-	public void stop() {
-		synchronized (this.running) {
-			this.running = false;
-			this.mode.forceTermination();
-		}
-	}
-	
-	public Thread start() {
-		Thread result = new Thread(this, "JDTNperf client");
+	public Thread start() throws IllegalStateException {
+		if (this.isRunning())
+			throw new IllegalStateException();
+		
+		Thread result = new Thread(this, "JDTNperf client " + this.demuxString);
 		result.setDaemon(true);
 		result.start();
 		return result;
 	}
 	
+	public void stop() {
+		this.running.set(false);
+	}
+	
+	private void reset() {
+		this.stop();
+		this.socket = null;
+		this.sentData.set(0);
+		this.sentBundles.set(0);
+		this.startTime = null;
+		this.totalExecutionTime = 0;
+	}
+	
 	@Override
 	public void run() {
-		synchronized (this.running) {
-			if (this.running)
-				return;
-			this.running = true;
-		}
+		this.reset();
+		this.running.set(true);
+		this.startTime = LocalDateTime.now();
+		
+		BundleSentListener bundleSent = new BundleSentListener() {
+			@Override
+			public void bundleSentEvent(Bundle bundle) {
+				sentData.addAndGet(bundle.getPayload().getData().length);
+				sentBundles.incrementAndGet();
+			}
+		};
+		this.addBundleSentListener(bundleSent);
+		
 		try {
-			BPSocket socket = BPSocket.register(this.demuxString, this.demuxNumber);
-			this.localEID = socket.getLocalEID();
+			this.socket = BPSocket.register(this.demuxString, this.demuxNumber);
 			
-			this.congestionControl.setSocket(socket);
-			this.congestionControl.setMode(this.mode);
-			this.congestionControl.setClient(this);
-			
-			Bundle bundle = new Bundle(this.dest);
-			bundle.setReplyTo(this.replyTo);
+			Bundle bundle = new Bundle(destination, this.getTimeToLive());
+			bundle.setReplyTo(this.getReplyTo());
 			bundle.addDeliveryOption(BundleDeliveryOption.DeliveryReceipt);
 			
-			ByteBuffer buffer = ByteBuffer.wrap(defaultByteBuffer(this.payloadSize));
-			ClientHeader header = new ClientHeader(bundle.getReplyTo(), this.mode.getClientMode(), this.congestionControl.isAckRequired());
-			header.insertHeaderInByteBuffer(buffer);
-			bundle.setData(buffer.array());
+			ClientMode clientMode = ClientMode.of(this, this.mode);
 			
-			ClientSender clientSender = new ClientSender(socket, bundle, this.congestionControl.getSemaphore());
-			clientSender.setMode(this.mode);
-			clientSender.setClient(this);
-			
-			clientSender.setBundleSentListeners(this.bundleSentListeners);
-			congestionControl.setBundleReceivedListeners(this.bundleReceivedListeners);
-			
-			Thread congestionControlThread = new Thread(this.congestionControl, "JDTNperf congestion control");
+			ClientCongestionControl clientCongestionControl = ClientCongestionControl.of(this, this.congestionControl);
+			Thread congestionControlThread = new Thread(this, "JDTNperf client - congestion control");
 			congestionControlThread.setDaemon(true);
-			
-			Thread clientSenderThread = new Thread(clientSender, "JDTNperf client sender");
-			clientSenderThread.setDaemon(true);
-			
-			mode.start();
 			congestionControlThread.start();
-			clientSenderThread.start();
 			
-			this.mode.waitForTerminating();
+			ClientSender sender = new ClientSender(this, clientCongestionControl, clientMode, bundle);
+			Thread senderThread = new Thread(sender, Thread.currentThread().getName() + " - sender");
+			senderThread.setDaemon(true);
+			senderThread.start();
 			
-			final LocalDateTime start = mode.getStartTime();
-			final LocalDateTime stop = mode.getStopTime();
-			
-			this.totalExecutionTime = ChronoUnit.MILLIS.between(start, stop) / 100;
-			
-			clientSenderThread.interrupt();
-			congestionControlThread.interrupt();
-			
+			senderThread.join();
+			congestionControlThread.interrupt(); // To force exiting in case of sleep
 			congestionControlThread.join();
-			clientSenderThread.join();
 			
-			try {
-				socket.unregister();
-			} catch (JALUnregisterException e) {}
+			LocalDateTime stopTime = LocalDateTime.now();
+			this.totalExecutionTime = ChronoUnit.MILLIS.between(this.startTime, stopTime) / 100;
+			
 		} catch (Exception e) {
 			this.stop();
-			e.printStackTrace();
+		}
+		
+		this.removeBundleSentListener(bundleSent);
+		
+	}
+	
+	Bundle receive() throws JALTimeoutException, JALReceptionInterruptedException, JALNotRegisteredException, JALReceiveException {
+		final Bundle bundle = this.socket.receive(30);
+		
+		// signal
+		for (BundleReceivedListener listener : this.bundleReceivedListeners) {
+			listener.bundleReceivedEvent(bundle);
+		}
+		
+		return bundle;
+	}
+	
+	void send(Bundle bundle) throws JALReceiverException, NullPointerException, IllegalArgumentException, IllegalStateException, JALNullPointerException, JALNotRegisteredException, JALSendException {
+		this.socket.send(bundle);
+		
+		// signal
+		for (BundleSentListener listener : this.bundleSentListeners) {
+			listener.bundleSentEvent(bundle);
 		}
 	}
 	
+	LocalDateTime getStartTime() {
+		return startTime;
+	}
+	
 }
-
-

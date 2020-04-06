@@ -1,69 +1,48 @@
 package dtnperf.client;
 
-import java.util.Collection;
-import java.util.concurrent.Semaphore;
+import java.nio.ByteBuffer;
 
-import dtnperf.event.BundleSentListener;
-import it.unibo.dtn.JAL.BPSocket;
+import dtnperf.header.ClientHeader;
 import it.unibo.dtn.JAL.Bundle;
 
 class ClientSender implements Runnable {
 
-	private Bundle bundle;
-	private Semaphore semaphore;
-	private BPSocket socket;
+	private final Client client;
+	private final ClientCongestionControl congestionControl;
+	private final ClientMode clientMode;
+	private final Bundle bundle;
 
-	private Mode mode;
-	private Client client;
-	
-	private Collection<BundleSentListener> bundleSentListeners;
-
-	public ClientSender(BPSocket socket, Bundle bundle, Semaphore semaphore) {
-		this.socket = socket;
-		this.bundle = bundle;
-		this.semaphore = semaphore;
-	}
-
-	protected Mode getMode() {
-		return this.mode;
-	}
-
-	void setMode(Mode mode) {
-		this.mode = mode;
-	}
-
-	void setClient(Client client) {
+	public ClientSender(Client client, ClientCongestionControl congestionControl, ClientMode clientMode, Bundle bundle) {
 		this.client = client;
+		this.congestionControl = congestionControl;
+		this.clientMode = clientMode;
+		this.bundle = bundle;
 	}
 
 	@Override
 	public void run() {
 		try {
-			while (!this.mode.isTerminated() && this.client.isRunning()) {
-				this.semaphore.acquire();
-				if (this.mode.isTerminated()) continue;
-				try {
-					this.socket.send(this.bundle);
-					this.signal();
-				} catch (Exception e) {
-					continue;
+			while (this.client.isRunning()) {
+				this.congestionControl.waitToSend();
+				
+				if (this.clientMode.isTerminated()) {
+					this.client.stop();
+				} else {
+					this.setHeaderAndData(this.bundle);
+					this.client.send(this.bundle);
 				}
+				
 			}
-		} catch (InterruptedException e) {
+		} catch (Exception e) {
 
-		} catch(Exception e) {
-			
 		}
 	}
 	
-	private void signal() {
-		for (BundleSentListener listener : bundleSentListeners) {
-			listener.bundleSentEvent(this.bundle);
-		}
-	}
-
-	void setBundleSentListeners(Collection<BundleSentListener> bundleSentListeners) {
-		this.bundleSentListeners = bundleSentListeners;
+	private void setHeaderAndData(Bundle bundle) {
+		ByteBuffer buffer = ByteBuffer.wrap(this.clientMode.getPayloadData());
+		ClientHeader header = new ClientHeader(bundle.getReplyTo(), this.clientMode.getClientMode(), this.congestionControl.isAckRequired());
+		header.insertHeaderInByteBuffer(buffer);
+		bundle.setData(buffer.array());
 	}
 
 }

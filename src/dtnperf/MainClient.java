@@ -10,14 +10,14 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 
 import dtnperf.client.Client;
-import dtnperf.client.ClientCongestionControl;
-import dtnperf.client.ClientCongestionControlRate;
-import dtnperf.client.ClientCongestionControlWindow;
+import dtnperf.client.CongestionControl;
 import dtnperf.client.DataMode;
 import dtnperf.client.DataUnit;
 import dtnperf.client.Mode;
+import dtnperf.client.RateCongestionControl;
 import dtnperf.client.RateUnit;
 import dtnperf.client.TimeMode;
+import dtnperf.client.WindowCongestionControl;
 import dtnperf.event.BundleSentListener;
 import it.unibo.dtn.JAL.Bundle;
 import it.unibo.dtn.JAL.BundleEID;
@@ -27,7 +27,7 @@ public class MainClient {
 
 	private static BundleEID destination;
 	private static BundleEID replyTo = BundleEID.NoneEndpoint;
-	private static ClientCongestionControl congestionControl = new ClientCongestionControlWindow(1);
+	private static CongestionControl congestionControl = new WindowCongestionControl(1);
 	private static Mode mode;
 	private static int payloadSize = 10;
 	private static DataUnit payloadUnit = DataUnit.KILOBYTES;
@@ -153,7 +153,7 @@ public class MainClient {
 		
 		if (commandLine.hasOption("W")) {
 			int window = Integer.parseInt(commandLine.getOptionValue("W"));
-			congestionControl = new ClientCongestionControlWindow(window);
+			congestionControl = new WindowCongestionControl(window);
 		}
 		
 		if (commandLine.hasOption("R")) {
@@ -182,7 +182,7 @@ public class MainClient {
 				}
 			}
 			int number = Integer.parseInt(numberString);
-			congestionControl = new ClientCongestionControlRate(number, rateUnit);
+			congestionControl = new RateCongestionControl(number, rateUnit);
 		}
 		
 	}

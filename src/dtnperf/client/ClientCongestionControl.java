@@ -1,78 +1,59 @@
 package dtnperf.client;
 
-import java.util.Collection;
 import java.util.concurrent.Semaphore;
 
-import dtnperf.event.BundleReceivedListener;
-import it.unibo.dtn.JAL.BPSocket;
-import it.unibo.dtn.JAL.Bundle;
-
-public abstract class ClientCongestionControl implements Runnable {
-
-	private Semaphore semaphore;
-	private BPSocket socket;
-	private Mode mode;
-	private Client client;
+abstract class ClientCongestionControl implements Runnable {
 	
-	private Collection<BundleReceivedListener> listeners;
-
-	protected ClientCongestionControl(Semaphore semaphore) {
+	private final Semaphore semaphore;
+	private final Client client;
+	private final boolean ackRequired;
+	
+	protected ClientCongestionControl (Client client, Semaphore semaphore, boolean ackRequired) {
 		this.semaphore = semaphore;
-	}
-
-	protected Mode getMode() {
-		return this.mode;
-	}
-
-	void setMode(Mode mode) {
-		this.mode = mode;
-	}
-
-	void setClient(Client client) {
 		this.client = client;
+		this.ackRequired = ackRequired;
 	}
-
+	
 	protected Client getClient() {
 		return this.client;
 	}
-
-	public Semaphore getSemaphore() {
-		return this.semaphore;
-	}
-
-	void setSocket(BPSocket socket) {
-		this.socket = socket;
+	
+	protected abstract void waitForNext() throws Exception;
+	protected abstract void closing();
+	
+	public void waitToSend() throws InterruptedException {
+		this.semaphore.acquire();
 	}
 	
-	void setBundleReceivedListeners(Collection<BundleReceivedListener> listeners) {
-		this.listeners = listeners;
+	public boolean isAckRequired() {
+		return this.ackRequired;
 	}
 	
-	protected final void signal(Bundle bundle) {
-		for (BundleReceivedListener listener : this.listeners) {
-			listener.bundleReceivedEvent(bundle);
-		}
-	}
-
-	protected BPSocket getSocket() {
-		return this.socket;
-	}
-
-	public abstract boolean isAckRequired();
-
-	protected abstract boolean waitForNext();
-
 	@Override
 	public void run() {
 		try {
-			while (!this.mode.isTerminated() && this.client.isRunning()) {
-				if (!this.waitForNext())
-					continue;
+			while (this.client.isRunning()) {
+				this.waitForNext();
 				this.semaphore.release();
 			}
 		} catch(Exception e) {
 
 		}
+		this.closing();
 	}
-
+	
+	public static ClientCongestionControl of(Client client, CongestionControl congestionControl) {
+		if (congestionControl == null || client == null) {
+			throw new IllegalArgumentException();
+		}
+		
+		if (congestionControl instanceof RateCongestionControl) {
+			return new ClientRateCongestionControl(client, (RateCongestionControl) congestionControl);
+		} else if (congestionControl instanceof WindowCongestionControl) {
+			return new ClientWindowCongestionControl(client, (WindowCongestionControl) congestionControl);
+		} else {
+			throw new IllegalStateException();
+		}
+	}
+	
 }

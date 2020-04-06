@@ -1,7 +1,7 @@
 package dtnperf.gui;
 
 import dtnperf.client.Client;
-import dtnperf.client.ClientCongestionControl;
+import dtnperf.client.CongestionControl;
 import dtnperf.client.DataUnit;
 import dtnperf.client.Mode;
 import it.unibo.dtn.JAL.BundleEID;
@@ -13,7 +13,7 @@ public class ClientGuiController {
 
 	public ClientGuiController() {}
 
-	public Client startClient(BundleEID dest, BundleEID replyTo, ClientCongestionControl congestionControl, Mode mode, int payloadSizeNumber, DataUnit payloadUnit) {
+	public Client startClient(BundleEID dest, BundleEID replyTo, CongestionControl congestionControl, Mode mode, int payloadSizeNumber, DataUnit payloadUnit) {
 		this.client = new Client(dest, replyTo, congestionControl, mode, payloadSizeNumber, payloadUnit);
 		this.clientThread = this.client.start();
 		return this.client;
