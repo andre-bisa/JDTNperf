@@ -34,7 +34,7 @@ class ClientSender implements Runnable {
 				
 			}
 		} catch (Exception e) {
-
+			this.client.stop();
 		}
 	}
 	

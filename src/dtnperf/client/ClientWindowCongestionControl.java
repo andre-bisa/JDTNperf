@@ -43,7 +43,7 @@ class ClientWindowCongestionControl extends ClientCongestionControl {
 	@Override
 	protected void waitForNext() throws JALNotRegisteredException, JALReceiveException {
 		boolean headerOK = false;
-		while (!headerOK) {
+		while (!headerOK && this.getClient().isRunning()) {
 			Bundle bundle;
 			try {
 				bundle = this.getClient().receive();

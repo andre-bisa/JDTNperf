@@ -14,28 +14,28 @@ public class ClientHeader {
 	private static final short BO_CRC_ENABLED = (short) 0x0800;
 	private static final short BO_CRC_DISABLED = (short) 0x0000;
 	private static final short BO_SET_PRIORITY = (short) 0x0040;
-	
+
 	private static final ByteOrder BYTEORDER = ByteOrder.nativeOrder(); // Get the endianess from the current system
-	
+
 	private ClientMode mode;
 	private boolean ackClient;
 	private AckToMonitor ackToMonitor = AckToMonitor.Normal;
 	private Priority ackPriority = null;
 	private boolean crcEnabled = false;
 	private boolean setExpiration = false;
-	
+
 	private int crc = 0; // TODO calculate
 	private int ackExpiration = 60;
 	private BundleEID replyTo;
-	
+
 	private ClientHeader() {}
-	
+
 	public ClientHeader(BundleEID replyTo, ClientMode mode, boolean ackClient) {
 		this.replyTo = replyTo;
 		this.mode = mode;
 		this.ackClient = ackClient;
 	}
-	
+
 	public ClientMode getMode() {
 		return mode;
 	}
@@ -106,9 +106,9 @@ public class ClientHeader {
 		buffer.order(BYTEORDER);
 		result.mode = ClientMode.getFromValue(buffer.getInt());
 		short options = buffer.getShort();
-		
+
 		insertOptionInClientHeader(result, options);
-		
+
 		result.ackExpiration = buffer.getInt();
 		result.crc = buffer.getInt();
 		short replytoSize = buffer.getShort();
@@ -118,7 +118,7 @@ public class ClientHeader {
 		result.replyTo = BundleEID.of(new String(replyto, StandardCharsets.UTF_8));
 		return result;
 	}
-	
+
 	private static void insertOptionInClientHeader(ClientHeader result, short options) {
 		result.ackClient = (options & BO_ACK_CLIENT_YES) == BO_ACK_CLIENT_YES;
 		result.ackToMonitor = AckToMonitor.getAckToMonitorFromValue(options);
@@ -155,5 +155,5 @@ public class ClientHeader {
 		result |= (this.crcEnabled ? BO_CRC_ENABLED : BO_CRC_DISABLED);
 		return result;
 	}
-	
+
 }

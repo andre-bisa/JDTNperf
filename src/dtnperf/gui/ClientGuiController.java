@@ -14,7 +14,10 @@ public class ClientGuiController {
 	public ClientGuiController() {}
 
 	public Client startClient(BundleEID dest, BundleEID replyTo, CongestionControl congestionControl, Mode mode, int payloadSizeNumber, DataUnit payloadUnit) {
-		this.client = new Client(dest, replyTo, congestionControl, mode, payloadSizeNumber, payloadUnit);
+		this.client = new Client(dest, mode);
+		this.client.setReplyTo(replyTo);
+		this.client.setCongestionControl(congestionControl);
+		this.client.setPayloadSize(payloadSizeNumber, payloadUnit);
 		this.clientThread = this.client.start();
 		return this.client;
 	}
