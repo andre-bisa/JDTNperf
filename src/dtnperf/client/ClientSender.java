@@ -2,7 +2,9 @@ package dtnperf.client;
 
 import java.nio.ByteBuffer;
 
+import dtnperf.header.AckToMonitor;
 import dtnperf.header.ClientHeader;
+import dtnperf.header.Priority;
 import it.unibo.dtn.JAL.Bundle;
 
 class ClientSender implements Runnable {
@@ -40,7 +42,16 @@ class ClientSender implements Runnable {
 	
 	private void setHeaderAndData(Bundle bundle) {
 		ByteBuffer buffer = ByteBuffer.wrap(this.clientMode.getPayloadData());
-		ClientHeader header = new ClientHeader(bundle.getReplyTo(), this.clientMode.getClientMode(), this.congestionControl.isAckRequired());
+		
+		ClientHeader header = ClientHeader.of(this.clientMode.getClientMode());
+		header.setAckClient(this.congestionControl.isAckRequired());
+		header.setReplyTo(bundle.getReplyTo());
+		header.setAckExpiration(60);
+		header.setAckPriority(Priority.Normal);
+		header.setAckToMonitor(AckToMonitor.Normal);
+		header.setCrcEnabled(false);
+		header.setSetExpiration(false);
+		
 		header.insertHeaderInByteBuffer(buffer);
 		bundle.setData(buffer.array());
 	}

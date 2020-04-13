@@ -1,5 +1,7 @@
 package dtnperf.server;
 
+import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.concurrent.ConcurrentLinkedDeque;
 
 import dtnperf.event.BundleReceivedListener;
@@ -109,9 +111,16 @@ public class Server implements Runnable {
 				System.exit(2);
 			}
 			
-			byte[] data = bundle.getData();
+			final byte[] data = bundle.getData();
+			final ByteBuffer buffer = ByteBuffer.wrap(data);
 			
-			ClientHeader clientHeader = ClientHeader.from(data);
+			ClientHeader clientHeader = ClientHeader.from(buffer);
+			
+			try {
+				FileReceiver.manage(clientHeader, buffer);
+			} catch (IOException e1) {
+				System.err.println("Error on creating received file");
+			}
 			
 			if (clientHeader.isAckClient()) {
 				ServerHeader serverHeader = new ServerHeader(bundle.getSource(), bundle.getCreationTimestamp());
