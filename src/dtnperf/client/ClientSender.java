@@ -1,6 +1,7 @@
 package dtnperf.client;
 
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 
 import dtnperf.header.AckToMonitor;
 import dtnperf.header.ClientHeader;
@@ -41,9 +42,9 @@ class ClientSender implements Runnable {
 	}
 	
 	private void setHeaderAndData(Bundle bundle) {
-		ByteBuffer buffer = ByteBuffer.wrap(this.clientMode.getPayloadData());
+		ByteBuffer buffer = ByteBuffer.allocate(this.client.getPayloadSize());
 		
-		ClientHeader header = ClientHeader.of(this.clientMode.getClientMode());
+		ClientHeader header = this.clientMode.getClientHeader();
 		header.setAckClient(this.congestionControl.isAckRequired());
 		header.setReplyTo(bundle.getReplyTo());
 		header.setAckExpiration(60);
@@ -53,7 +54,14 @@ class ClientSender implements Runnable {
 		header.setSetExpiration(false);
 		
 		header.insertHeaderInByteBuffer(buffer);
-		bundle.setData(buffer.array());
+		
+		this.clientMode.insertPayloadInByteBuffer(buffer);
+		
+		if (buffer.position() == this.client.getPayloadSize()) {
+			bundle.setData(buffer.array());
+		} else {
+			bundle.setData(Arrays.copyOf(buffer.array(), buffer.position()));
+		}
 	}
 
 }

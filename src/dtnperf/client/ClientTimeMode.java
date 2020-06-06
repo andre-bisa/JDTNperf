@@ -1,10 +1,13 @@
 package dtnperf.client;
 
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 
+import dtnperf.header.ClientHeader;
+import dtnperf.header.ClientHeaderTime;
 import it.unibo.dtn.JAL.Bundle;
 
 class ClientTimeMode extends ClientMode {
@@ -23,8 +26,8 @@ class ClientTimeMode extends ClientMode {
 	}
 
 	@Override
-	public byte[] getPayloadData() {
-		return payloadCache;
+	public void insertPayloadInByteBuffer(ByteBuffer buffer) {
+		buffer.put(payloadCache, 0, buffer.remaining());
 	}
 
 	@Override
@@ -38,8 +41,8 @@ class ClientTimeMode extends ClientMode {
 	}
 
 	@Override
-	public dtnperf.header.ClientMode getClientMode() {
-		return dtnperf.header.ClientMode.Time;
+	public ClientHeader getClientHeader() {
+		return new ClientHeaderTime();
 	}
 
 }

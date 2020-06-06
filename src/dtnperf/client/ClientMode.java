@@ -1,6 +1,10 @@
 package dtnperf.client;
 
+import java.io.FileNotFoundException;
+import java.nio.ByteBuffer;
+
 import dtnperf.event.BundleSentListener;
+import dtnperf.header.ClientHeader;
 import it.unibo.dtn.JAL.Bundle;
 
 abstract class ClientMode {
@@ -18,16 +22,17 @@ abstract class ClientMode {
 		});
 	}
 	
-	public abstract byte[] getPayloadData();
+	//public abstract byte[] getPayloadData(int headerSize);
+	public abstract void insertPayloadInByteBuffer(ByteBuffer buffer);
 	public abstract boolean isTerminated();
-	public abstract dtnperf.header.ClientMode getClientMode();
+	public abstract ClientHeader getClientHeader();
 	protected abstract void bundleSent(Bundle bundle);
 
 	public Client getClient() {
 		return client;
 	}
 	
-	public static ClientMode of(Client client, Mode mode) {
+	public static ClientMode of(Client client, Mode mode) throws FileNotFoundException {
 		if (mode == null || client == null) {
 			throw new IllegalArgumentException();
 		}
@@ -36,6 +41,8 @@ abstract class ClientMode {
 			return new ClientTimeMode(client, (TimeMode) mode);
 		} else if (mode instanceof DataMode) {
 			return new ClientDataMode(client, (DataMode) mode);
+		} else if (mode instanceof FileMode) {
+			return new ClientFileMode(client, (FileMode) mode);
 		} else {
 			throw new IllegalStateException();
 		}

@@ -47,7 +47,7 @@ public class FileReceiver {
 		}
 	}
 
-	private static boolean fileIsArrivedCompletly(FileInfo fileInfo) {
+	private static boolean fileHasArrivedCompletly(FileInfo fileInfo) {
 		int oldTo = 0;
 		for (Couple couple : fileInfo.offsets) {
 			if (couple.from != oldTo)
@@ -65,7 +65,7 @@ public class FileReceiver {
 	}
 
 	private static void assembleFile(FileInfo fileInfo) throws IOException {
-		if (fileIsArrivedCompletly(fileInfo)) {
+		if (fileHasArrivedCompletly(fileInfo)) {
 			new File(fileInfo.filename).delete();
 
 			FileOutputStream fw = new FileOutputStream(fileInfo.filename);

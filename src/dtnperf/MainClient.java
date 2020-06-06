@@ -19,6 +19,7 @@ import dtnperf.client.Client;
 import dtnperf.client.CongestionControl;
 import dtnperf.client.DataMode;
 import dtnperf.client.DataUnit;
+import dtnperf.client.FileMode;
 import dtnperf.client.Mode;
 import dtnperf.client.RateCongestionControl;
 import dtnperf.client.RateUnit;
@@ -110,6 +111,8 @@ public class MainClient {
 		modeOption.addOption(dataModeOption);
 		Option timeModeOption = Option.builder("T").hasArg().required(false).desc("Time mode").longOpt("time").build();
 		modeOption.addOption(timeModeOption);
+		Option fileModeOption = Option.builder("F").hasArg().required(false).desc("File mode").longOpt("file").build();
+		modeOption.addOption(fileModeOption);
 		modeOption.setRequired(true);
 		options.addOptionGroup(modeOption);
 
@@ -167,10 +170,16 @@ public class MainClient {
 			deliveryOptions.add(BundleDeliveryOption.DeleteReceipt);
 		}
 
-		if (!commandLine.hasOption("D") && !commandLine.hasOption("T")) {
-			throw new ParseException("Error, you must to choose between Time and Data mode.");
-		} else if (commandLine.hasOption("D") && commandLine.hasOption("T")) {
-			throw new ParseException("Error, you must choose between Time and Data mode, but not both.");
+		{
+			int numberOfModes = 0;
+			if (commandLine.hasOption("D")) numberOfModes++;
+			if (commandLine.hasOption("T")) numberOfModes++;
+			if (commandLine.hasOption("F")) numberOfModes++;
+			if (numberOfModes == 0) {
+				throw new ParseException("Error, you must to choose between Time, Data and File mode.");
+			} else if (numberOfModes > 1) {
+				throw new ParseException("Error, you must choose between Time, Data and File mode, but not more than one.");
+			}
 		}
 
 		destination = BundleEID.of(commandLine.getOptionValue("d"));
@@ -250,6 +259,10 @@ public class MainClient {
 		if (commandLine.hasOption("T")) {
 			int time = Integer.parseInt(commandLine.getOptionValue("T").trim());
 			mode = new TimeMode(time, ChronoUnit.SECONDS);
+		}
+		
+		if (commandLine.hasOption("F")) {
+			mode = new FileMode(commandLine.getOptionValue("F").trim());
 		}
 
 		if (commandLine.hasOption("W")) {

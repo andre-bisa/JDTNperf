@@ -52,4 +52,13 @@ public class ClientHeaderFile extends ClientHeader {
 		this.setFileDimension(buffer.getInt());
 	}
 	
+	@Override
+	public void insertHeaderInByteBuffer(ByteBuffer buffer) {
+		super.insertHeaderInByteBuffer(buffer);
+		buffer.putInt(this.expiration);
+		buffer.putShort((short) this.filename.length());
+		buffer.put(StandardCharsets.UTF_8.encode(this.filename).array());
+		buffer.putInt(this.file_dim);
+	}
+	
 }

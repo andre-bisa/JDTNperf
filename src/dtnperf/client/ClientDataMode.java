@@ -1,8 +1,11 @@
 package dtnperf.client;
 
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
+import dtnperf.header.ClientHeader;
+import dtnperf.header.ClientHeaderData;
 import it.unibo.dtn.JAL.Bundle;
 
 class ClientDataMode extends ClientMode {
@@ -21,10 +24,10 @@ class ClientDataMode extends ClientMode {
 		this.payloadCache = new byte[this.getClient().getPayloadSize()];
 		Arrays.fill(this.payloadCache, StandardCharsets.UTF_8.encode("X").array()[0]);
 	}
-
+	
 	@Override
-	public byte[] getPayloadData() {
-		return payloadCache;
+	public void insertPayloadInByteBuffer(ByteBuffer buffer) {
+		buffer.put(payloadCache, 0, buffer.remaining());
 	}
 
 	@Override
@@ -37,9 +40,14 @@ class ClientDataMode extends ClientMode {
 		this.dataSent += bundle.getPayload().getData().length;
 	}
 
-	@Override
+	/*@Override
 	public dtnperf.header.ClientMode getClientMode() {
 		return dtnperf.header.ClientMode.Data;
+	}*/
+
+	@Override
+	public ClientHeader getClientHeader() {
+		return new ClientHeaderData();
 	}
 
 }
